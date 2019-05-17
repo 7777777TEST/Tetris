@@ -25,7 +25,7 @@
 <body>
 	<div id="Score">Score:0</div><br>
 	<canvas id="Ganvas" width=200 height=300 style="left:0" onmousedown="PAUSE()"></canvas><canvas id="Preview"
-		width=200 height=300></canvas>
+		width=200 height=300 onclick="exchange()"></canvas>
 	<div>
 		<input type="button" onmousedown="emulatekey(37)" onmouseup="emulatekey(0)" value="<-" class="button">
 		<input type="button" onmousedown="emulatekey(38)" onmouseup="emulatekey(0)" value="A" class="button">
@@ -160,7 +160,8 @@
 				current.x = 5;
 				current.y = 21;
 				current.type = next_type;
-				next_type = Math.floor(Math.random() * 7) + 1;
+				while (current.type == next_type)
+					next_type = Math.floor(Math.random() * 7) + 1;
 				drawPreview();
 				current.rotate = Math.round(Math.random() * 4);
 				if (!putBlock(current, false)) {
@@ -189,8 +190,10 @@
 			current.x = 5;
 			current.y = 21;
 			next_type = Math.floor(Math.random() * 7) + 1;
+			current.type = next_type;
+			while (current.type == next_type)
+				next_type = Math.floor(Math.random() * 7) + 1;
 			drawPreview();
-			current.type = Math.floor(Math.random() * 7) + 1;
 			current.rotate = Math.round(Math.random() * 4);
 		}
 		var pressTime = 0, interval = 0, pause = false;
@@ -265,7 +268,7 @@
 			var pcanvas = document.getElementById("Preview");
 			var pctx = pcanvas.getContext("2d");
 			pctx.beginPath();
-			pctx.fillStyle = "#000";
+			pctx.fillStyle = "#09D";
 			pctx.rect(0, 0, 50, 50);
 			pctx.fill();
 			pctx.beginPath();
@@ -278,6 +281,24 @@
 						pctx.fill();
 					}
 				}
+			}
+		}
+		function exchange() {
+			deleteBlock(current);
+			current.x = 5;
+			current.y = 21;
+			var ttype = current.type;
+			current.type = next_type;
+			next_type = ttype;
+			drawPreview();
+			current.rotate = Math.round(Math.random() * 4);
+			if (!putBlock(current, false)) {
+				gameover = true;
+				interval = 0;
+				pressTime = 0;
+				keyCode = 0;
+				alert("Game Over");
+				init();
 			}
 		}
 	</script>
