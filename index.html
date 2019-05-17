@@ -2,254 +2,285 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="manifest" href="manifest.json">
-    <title>Tetris</title>
-    <style>
-        body {
-            color: #09D;
-            font-size: 20px;
-        }
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<link rel="manifest" href="manifest.json">
+	<title>Tetris</title>
+	<style>
+		body {
+			color: #09D;
+			font-size: 20px;
+		}
 
-        .button {
-            background-color: #09D;
-            color: #FFF;
-            padding: 5%;
-            border: 0px;
-        }
-    </style>
+		.button {
+			background-color: #09D;
+			color: #FFF;
+			padding: 5%;
+			border: 0px;
+		}
+	</style>
 </head>
 
 <body>
-    <div id="Score">Score:0</div><br>
-    <canvas id="Ganvas" width=200 height=300 style="left:0" onmousedown="PAUSE()"></canvas>
-    <div>
-        <input type="button" onmousedown="emulatekey(37)" onmouseup="emulatekey(0)" value="<-" class="button">
-        <input type="button" onmousedown="emulatekey(38)" onmouseup="emulatekey(0)" value="A" class="button">
-        <input type="button" onmousedown="emulatekey(39)" onmouseup="emulatekey(0)" value="->" class="button">
-    </div>
-    <script>
-    //Service worker
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(function (registration) {
-		console.log('OK: ', registration.scope);
-	}).catch(function (err) {
-		console.log('FAILED: ', err);
-	});
-    }
-var board = [];
-var current = { x: 0, y: 0, type: 0, rotate: 0 };
-var block = [
-	{ rotate: 1, p: [[0, 0], [0, 0], [0, 0]] },  // null
-	{ rotate: 2, p: [[0, -1], [0, 1], [0, 2]] },  // |
-	{ rotate: 4, p: [[0, -1], [0, 1], [1, 1]] },  // J
-	{ rotate: 4, p: [[0, -1], [0, 1], [-1, 1]] },  // L
-	{ rotate: 2, p: [[0, -1], [1, 0], [1, 1]] },  // key1
-	{ rotate: 2, p: [[0, -1], [-1, 0], [-1, 1]] },  // key2
-	{ rotate: 1, p: [[0, 1], [1, 0], [1, 1]] },  // square
-	{ rotate: 4, p: [[0, -1], [1, 0], [-1, 0]] },  // T
-];
-var gameover = false, Score = 0;
+	<div id="Score">Score:0</div><br>
+	<canvas id="Ganvas" width=200 height=300 style="left:0" onmousedown="PAUSE()"></canvas><canvas id="Preview"
+		width=200 height=300></canvas>
+	<div>
+		<input type="button" onmousedown="emulatekey(37)" onmouseup="emulatekey(0)" value="<-" class="button">
+		<input type="button" onmousedown="emulatekey(38)" onmouseup="emulatekey(0)" value="A" class="button">
+		<input type="button" onmousedown="emulatekey(39)" onmouseup="emulatekey(0)" value="->" class="button">
+	</div>
+	<script>
+		//Service worker
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('sw.js').then(function (registration) {
+				console.log('OK: ', registration.scope);
+			}).catch(function (err) {
+				console.log('FAILED: ', err);
+			});
+		}
+		var board = [];
+		var current = { x: 0, y: 0, type: 0, rotate: 0 };
+		var next_type = Math.floor(Math.random() * 6) + 1;
+		var block = [
+			{ rotate: 1, p: [[0, 0], [0, 0], [0, 0]] },  // null
+			{ rotate: 2, p: [[0, -1], [0, 1], [0, 2]] },  // |
+			{ rotate: 4, p: [[0, -1], [0, 1], [1, 1]] },  // J
+			{ rotate: 4, p: [[0, -1], [0, 1], [-1, 1]] },  // L
+			{ rotate: 2, p: [[0, -1], [1, 0], [1, 1]] },  // key1
+			{ rotate: 2, p: [[0, -1], [-1, 0], [-1, 1]] },  // key2
+			{ rotate: 1, p: [[0, 1], [1, 0], [1, 1]] },  // square
+			{ rotate: 4, p: [[0, -1], [1, 0], [-1, 0]] },  // T
+		];
+		var gameover = false, Score = 0;
 
-function putBlock(s, action) {
-	if (board[s.x][s.y] != 0) {
-		return false;
-	}
-	if (action) {
-		board[s.x][s.y] = s.type;
-	}
-	for (var i = 0; i < 3; i++) {
-		var dx = block[s.type].p[i][0];
-		var dy = block[s.type].p[i][1];
-		var r = s.rotate % block[s.type].rotate;
-		for (var j = 0; j < r; j++) {
-			var nx = dx, ny = dy;
-			dx = ny; dy = -nx;
-		}
-		if (board[s.x + dx][s.y + dy]) {
-			return false;
-		}
-		if (action) {
-			board[s.x + dx][s.y + dy] = true;
-		}
-	}
-	if (!action) {
-		putBlock(s, true);
-	}
-	return true;
+		function putBlock(s, action) {
+			if (board[s.x][s.y] != 0) {
+				return false;
+			}
+			if (action) {
+				board[s.x][s.y] = s.type;
+			}
+			for (var i = 0; i < 3; i++) {
+				var dx = block[s.type].p[i][0];
+				var dy = block[s.type].p[i][1];
+				var r = s.rotate % block[s.type].rotate;
+				for (var j = 0; j < r; j++) {
+					var nx = dx, ny = dy;
+					dx = ny; dy = -nx;
+				}
+				if (board[s.x + dx][s.y + dy]) {
+					return false;
+				}
+				if (action) {
+					board[s.x + dx][s.y + dy] = true;
+				}
+			}
+			if (!action) {
+				putBlock(s, true);
+			}
+			return true;
 
-}
-function deleteBlock(s) {
-	board[s.x][s.y] = false;
-
-	for (var i = 0; i < 3; i++) {
-		var dx = block[s.type].p[i][0];
-		var dy = block[s.type].p[i][1];
-		var r = s.rotate % block[s.type].rotate;
-		for (var j = 0; j < r; j++) {
-			var nx = dx, ny = dy;
-			dx = ny; dy = -nx;
 		}
-		board[s.x + dx][s.y + dy] = false;
-	}
+		function deleteBlock(s) {
+			board[s.x][s.y] = false;
 
-	return true;
-}
-function processInput(k) {
-	if(gameover||pause)return;
-	var n = { x: current.x, y: current.y, type: current.type, rotate: current.rotate };
-	switch (k) {
-		case 37:
-			n.x++;
-			break;
-		case 39:
-			n.x--;
-			break;
-		case 38:
-			n.rotate++;
-			break;
-		case 40:
-			n.y--;
-			break;
-	}
-	if (n.x != current.x || n.y != current.y || n.rotate != current.rotate) {
-		deleteBlock(current);
-		if (putBlock(n, false)) {
-			current = n;
-		} else {
-			putBlock(current, false);
+			for (var i = 0; i < 3; i++) {
+				var dx = block[s.type].p[i][0];
+				var dy = block[s.type].p[i][1];
+				var r = s.rotate % block[s.type].rotate;
+				for (var j = 0; j < r; j++) {
+					var nx = dx, ny = dy;
+					dx = ny; dy = -nx;
+				}
+				board[s.x + dx][s.y + dy] = false;
+			}
+
+			return true;
 		}
-	}
-	draw();
-}
-function deleteLine() {
-	var lines_count = 0;
-	for (var y = 1; y < 23; y++) {
-											       var flag = true;
-											       for (var x = 1; x <= 10; x++) {
-											       if (!board[x][y]) {
-											       flag = false;
-											       }
-											       }
-											       if (flag) {
-											       lines_count++;
-											       Score += 10;
-											       for (var j = y; j < 23; j++) {
-											       for (var i = 1; i <= 10; i++) {
-											       board[i][j] = board[i][j + 1];
-											       }
-											       }
-											       y--;
-											       }
-											       }
-											       if (lines_count > 1);
-	Score += (lines_count * 10);
-	document.getElementById("Score").innerHTML = "Score:" + Score;
-}
-function blockDown() {
-	deleteBlock(current);
-	current.y--;
-	if (!putBlock(current, false)) {
-		current.y++;
-		putBlock(current, false);
-		deleteLine();
-		current.x = 5;
-		current.y = 21;
-		current.type = Math.floor(Math.random() * 7) + 1;
-		current.rotate = Math.round(Math.random() * 4);
-		if (!putBlock(current, false)) {
-			gameover = true;
-			interval = 0;
-			pressTime = 0;
+		function processInput(k) {
+			if (gameover || pause) return;
+			var n = { x: current.x, y: current.y, type: current.type, rotate: current.rotate };
+			switch (k) {
+				case 37:
+					n.x++;
+					break;
+				case 39:
+					n.x--;
+					break;
+				case 38:
+					n.rotate++;
+					break;
+				case 40:
+					n.y--;
+					break;
+			}
+			if (n.x != current.x || n.y != current.y || n.rotate != current.rotate) {
+				deleteBlock(current);
+				if (putBlock(n, false)) {
+					current = n;
+				} else {
+					putBlock(current, false);
+				}
+			}
+			draw();
+		}
+		function deleteLine() {
+			var lines_count = 0;
+			for (var y = 1; y < 23; y++) {
+				var flag = true;
+				for (var x = 1; x <= 10; x++) {
+					if (!board[x][y]) {
+						flag = false;
+					}
+				}
+				if (flag) {
+					lines_count++;
+					Score += 10;
+					for (var j = y; j < 23; j++) {
+						for (var i = 1; i <= 10; i++) {
+							board[i][j] = board[i][j + 1];
+						}
+					}
+					y--;
+				}
+			}
+			if (lines_count > 1);
+			Score += (lines_count * 10);
+			document.getElementById("Score").innerHTML = "Score:" + Score;
+		}
+		function blockDown() {
+			deleteBlock(current);
+			current.y--;
+			if (!putBlock(current, false)) {
+				current.y++;
+				putBlock(current, false);
+				deleteLine();
+				current.x = 5;
+				current.y = 21;
+				current.type = next_type;
+				next_type = Math.floor(Math.random() * 7) + 1;
+				drawPreview();
+				current.rotate = Math.round(Math.random() * 4);
+				if (!putBlock(current, false)) {
+					gameover = true;
+					interval = 0;
+					pressTime = 0;
+					keyCode = 0;
+					alert("Game Over");
+					init();
+				}
+			}
+		}
+		function init() {
+			alert("START");
+			for (var i = 0; i < 12; i++) {
+				board[i] = [];
+				for (var j = 0; j < 25; j++) {
+					if (i == 0 || i == 11 || j == 0)
+						board[i][j] = true;
+					else
+						board[i][j] = false;
+				}
+			}
+			Score = 0;
+			gameover = false;
+			current.x = 5;
+			current.y = 21;
+			next_type = Math.floor(Math.random() * 7) + 1;
+			drawPreview();
+			current.type = Math.floor(Math.random() * 7) + 1;
+			current.rotate = Math.round(Math.random() * 4);
+		}
+		var pressTime = 0, interval = 0, pause = false;
+		function update() {
+			if (!gameover && !pause) {
+				if (keyCode != 0)
+					pressTime++;
+				if (pressTime > 20) {
+					processInput(keyCode);
+				}
+				if (interval % 20 == 0)
+					blockDown();
+			}
+			interval++;
+			draw();
+		}
+		var color = "#09D"
+		function draw() {
+			var canvas = document.getElementById("Ganvas");
+			var ctx = canvas.getContext("2d");
+			ctx.beginPath();
+			ctx.fillStyle = color;
+			ctx.rect(20, 20, 102, 232);
+			ctx.fill();
+			ctx.fillStyle = "#FFF";
+			for (var i = 1; i < 11; i++) {
+				for (var j = 1; j < 24; j++) {
+					if (board[i][j]) {
+						ctx.beginPath();
+						ctx.rect((12 - i) * 10 + 2, (25 - j) * 10 + 2, 8, 8);
+						ctx.fill();
+					}
+				}
+			}
+		}
+		var keyCode = 0;
+		init();
+		setInterval(update, 20)
+		document.addEventListener("keydown", function (e) {
+			keyCode = e.keyCode;
+			processInput(keyCode);
+		}, true);
+		document.addEventListener("keyup", function (e) {
 			keyCode = 0;
-			alert("Game Over");
-			init();
+			pressTime = 0;
+		})
+		function emulatekey(e) {
+			keyCode = e;
+			if (e == 0) {
+				pressTime = 0;
+			} else {
+				processInput(keyCode);
+			}
 		}
-	}
-}
-function init() {
-	alert("START");
-	for (var i = 0; i < 12; i++) {
-											       board[i] = [];
-											       for (var j = 0; j < 25; j++) {
-											       if (i == 0 || i == 11 || j == 0)
-											       board[i][j] = true;
-											       else
-											       board[i][j] = false;
-											       }
-											       }
-											       Score=0;
-											       gameover = false;
-											       current.x = 5;
-											       current.y = 21;
-											       current.type = Math.floor(Math.random() * 6) + 1;
-											       current.rotate = Math.round(Math.random() * 4);
-											       }
-											       var pressTime = 0, interval = 0, pause = false;
-											       function update() {
-											       if (!gameover && !pause) {
-											       if (keyCode != 0)
-											       pressTime++;
-											       if (pressTime > 20) {
-												       processInput(keyCode);
-											       }
-												       if (interval % 20 == 0)
-													       blockDown();
-											       }
-												       interval++;
-												       draw();
-											       }
-var color="#09D"
-function draw() {
-	var canvas = document.getElementById("Ganvas");
-	var ctx = canvas.getContext("2d");
-	ctx.beginPath();
-	ctx.fillStyle = color;
-	ctx.rect(20, 20, 102, 232);
-	ctx.fill();
-	ctx.fillStyle = "#FFF";
-	for (var i = 1; i < 11; i++) {
-    for (var j = 1; j < 24; j++) {
-    if (board[i][j]) {
-    ctx.beginPath();
-    ctx.rect((12 - i) * 10 + 2, (25 - j) * 10 + 2, 8, 8);
-    ctx.fill();
-    }
-    }
-    }
-    }
-    var keyCode = 0;
-    init();
-    setInterval(update, 20)
-    document.addEventListener("keydown", function (e) {
-    keyCode = e.keyCode;
-    processInput(keyCode);
-    }, true);
-    document.addEventListener("keyup", function (e) {
-    keyCode = 0;
-    pressTime = 0;
-    })
-    function emulatekey(e) {
-    keyCode = e;
-    if (e == 0) {
-    pressTime = 0;
-    } else {
-    processInput(keyCode);
-    }
-    }
-    function PAUSE() {
-    if (pause) {
-    color="#09D";
-    pause = false;
-    }
-    else {
-    color="#F80";
-    pause = true;
-    }
-    }
-    </script>
+		function PAUSE() {
+			if (pause) {
+				color = "#09D";
+				pause = false;
+			}
+			else {
+				color = "#F80";
+				pause = true;
+			}
+		}
+		function drawPreview() {
+			var tmp = [[0, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]];
+			for (var i = 0; i < 3; i++) {
+				var dx = block[next_type].p[i][0];
+				var dy = block[next_type].p[i][1];
+				tmp[1 + dx][1 + dy] = 1;
+			}
+			var pcanvas = document.getElementById("Preview");
+			var pctx = pcanvas.getContext("2d");
+			pctx.beginPath();
+			pctx.fillStyle = "#000";
+			pctx.rect(0, 0, 50, 50);
+			pctx.fill();
+			pctx.beginPath();
+			pctx.fillStyle = "#FFF";
+			for (var i = 0; i < 4; i++) {
+				for (var j = 0; j < 4; j++) {
+					if (tmp[i][j] == 1) {
+						pctx.beginPath();
+						pctx.rect((3 - i) * 10 + 2, (3 - j) * 10 + 2, 8, 8);
+						pctx.fill();
+					}
+				}
+			}
+		}
+	</script>
 </body>
 
 </html>
